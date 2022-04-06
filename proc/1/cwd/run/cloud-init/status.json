@@ -1,0 +1,31 @@
+{
+ "v1": {
+  "datasource": "DataSourceEc2Local",
+  "init": {
+   "errors": [],
+   "finished": 1648939891.900994,
+   "start": 1648939891.0239887
+  },
+  "init-local": {
+   "errors": [],
+   "finished": 1648939889.3642275,
+   "start": 1648939888.3779373
+  },
+  "modules-config": {
+   "errors": [],
+   "finished": 1648939899.9483604,
+   "start": 1648939899.506932
+  },
+  "modules-final": {
+   "errors": [],
+   "finished": 1648939901.4875748,
+   "start": 1648939901.080279
+  },
+  "modules-init": {
+   "errors": [],
+   "finished": null,
+   "start": null
+  },
+  "stage": null
+ }
+}

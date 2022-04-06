@@ -1,0 +1,6 @@
+# This is private data. Do not parse.
+OPER_STATE=routable
+CARRIER_STATE=carrier
+ADDRESS_STATE=routable
+DNS=172.31.0.2
+DOMAINS=eu-central-1.compute.internal

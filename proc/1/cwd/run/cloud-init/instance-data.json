@@ -1,0 +1,204 @@
+{
+ "base64_encoded_keys": [],
+ "ds": {
+  "_doc": "EXPERIMENTAL: The structure and format of content scoped under the 'ds' key may change in subsequent releases of cloud-init.",
+  "_metadata_api_version": "2018-09-24",
+  "dynamic": {
+   "instance-identity": {
+    "document": {
+     "accountId": "737951218338",
+     "architecture": "x86_64",
+     "availabilityZone": "eu-central-1b",
+     "billingProducts": null,
+     "devpayProductCodes": null,
+     "imageId": "ami-0d527b8c289b4af7f",
+     "instanceId": "i-05af1091b00c19269",
+     "instanceType": "t2.micro",
+     "kernelId": null,
+     "marketplaceProductCodes": null,
+     "pendingTime": "2022-04-02T22:50:48Z",
+     "privateIp": "172.31.44.59",
+     "ramdiskId": null,
+     "region": "eu-central-1",
+     "version": "2017-09-30"
+    },
+    "pkcs7": [
+     "MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggHiewog",
+     "ICJhY2NvdW50SWQiIDogIjczNzk1MTIxODMzOCIsCiAgImFyY2hpdGVjdHVyZSIgOiAieDg2XzY0",
+     "IiwKICAiYXZhaWxhYmlsaXR5Wm9uZSIgOiAiZXUtY2VudHJhbC0xYiIsCiAgImJpbGxpbmdQcm9k",
+     "dWN0cyIgOiBudWxsLAogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAibWFya2V0cGxh",
+     "Y2VQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAiaW1hZ2VJZCIgOiAiYW1pLTBkNTI3YjhjMjg5YjRh",
+     "ZjdmIiwKICAiaW5zdGFuY2VJZCIgOiAiaS0wNWFmMTA5MWIwMGMxOTI2OSIsCiAgImluc3RhbmNl",
+     "VHlwZSIgOiAidDIubWljcm8iLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJwZW5kaW5nVGltZSIg",
+     "OiAiMjAyMi0wNC0wMlQyMjo1MDo0OFoiLAogICJwcml2YXRlSXAiIDogIjE3Mi4zMS40NC41OSIs",
+     "CiAgInJhbWRpc2tJZCIgOiBudWxsLAogICJyZWdpb24iIDogImV1LWNlbnRyYWwtMSIsCiAgInZl",
+     "cnNpb24iIDogIjIwMTctMDktMzAiCn0AAAAAAAAxggE/MIIBOwIBATBpMFwxCzAJBgNVBAYTAlVT",
+     "MRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdB",
+     "bWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCggYQwGAYJKoZIhvcN",
+     "AQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDAyMjI1MDU1WjAjBgkqhkiG9w0B",
+     "CQQxFgQUw6YUoUD5TU15QUfBPN2lLGqe3NIwJQYJKoZIhvcNAQk0MRgwFjAJBgUrDgMCGgUAoQkG",
+     "ByqGSM44BAMwCQYHKoZIzjgEAwQuMCwCFEk1qBuIVPFo92WEpmLKJo5FlJwOAhR/gUc8FR4+Ids2",
+     "S1k1ykqf7aHe6gAAAAAAAA=="
+    ],
+    "rsa2048": [
+     "MIAGCSqGSIb3DQEHAqCAMIACAQExDzANBglghkgBZQMEAgEFADCABgkqhkiG9w0BBwGggCSABIIB",
+     "4nsKICAiYWNjb3VudElkIiA6ICI3Mzc5NTEyMTgzMzgiLAogICJhcmNoaXRlY3R1cmUiIDogIng4",
+     "Nl82NCIsCiAgImF2YWlsYWJpbGl0eVpvbmUiIDogImV1LWNlbnRyYWwtMWIiLAogICJiaWxsaW5n",
+     "UHJvZHVjdHMiIDogbnVsbCwKICAiZGV2cGF5UHJvZHVjdENvZGVzIiA6IG51bGwsCiAgIm1hcmtl",
+     "dHBsYWNlUHJvZHVjdENvZGVzIiA6IG51bGwsCiAgImltYWdlSWQiIDogImFtaS0wZDUyN2I4YzI4",
+     "OWI0YWY3ZiIsCiAgImluc3RhbmNlSWQiIDogImktMDVhZjEwOTFiMDBjMTkyNjkiLAogICJpbnN0",
+     "YW5jZVR5cGUiIDogInQyLm1pY3JvIiwKICAia2VybmVsSWQiIDogbnVsbCwKICAicGVuZGluZ1Rp",
+     "bWUiIDogIjIwMjItMDQtMDJUMjI6NTA6NDhaIiwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNDQu",
+     "NTkiLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJldS1jZW50cmFsLTEiLAog",
+     "ICJ2ZXJzaW9uIiA6ICIyMDE3LTA5LTMwIgp9AAAAAAAAMYICLzCCAisCAQEwaTBcMQswCQYDVQQG",
+     "EwJVUzEZMBcGA1UECBMQV2FzaGluZ3RvbiBTdGF0ZTEQMA4GA1UEBxMHU2VhdHRsZTEgMB4GA1UE",
+     "ChMXQW1hem9uIFdlYiBTZXJ2aWNlcyBMTEMCCQCg/r+i3kf1qzANBglghkgBZQMEAgEFAKCBmDAY",
+     "BgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMjA0MDIyMjUwNTVaMC0G",
+     "CSqGSIb3DQEJNDEgMB4wDQYJYIZIAWUDBAIBBQChDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkE",
+     "MSIEIFrDl9dNgHSupWgkqHuWOQMqRajMP09JGzFsjpMQo9Q3MA0GCSqGSIb3DQEBCwUABIIBAD1o",
+     "T7YooJxFCMywBF6n6uJ7oD3HGoH2bMf5elQ89tohzzJVwh5eO6PYNEiQ9Qd+i/PiNIl7/aQO3fLO",
+     "v5rc8l449BXEMUEGdpndCso5JN6+s/YyNTQtCLu7MMQOhbDg77/wX38shTJeHCz8CgNCL3JUhSW1",
+     "TkTFoM99ybCg1gCDRyj3KnZFHQbxe4fY+woMkT8rLedQWOmtiZtusem3k71MSpcubwivWKmswoaF",
+     "Nh7YIjxxp8H/mDaWCFeKHwh8ja9Q3lCL4S5xrSJk4LreEnoVfbmkk+i7tw8N9yed+4cBVBA1O/81",
+     "T/cxluUPV0n5nmJKzyn4rG2pKpkhVD/Yxt8AAAAAAAA="
+    ],
+    "signature": [
+     "cnV6f8WJiGKc93uN57u8JaZZBq49QW/FITQcmMWn48ql0qbSKPPPqtdnZvdHIkMFO3wnvecXbuxt",
+     "uz1JLiJ8Es90iq/9WdojhiVaj9pLTeAdX/zhBY2F+xCHPOihc22+USHqP+Oi/tVzpJO6zAT2MleR",
+     "CaPJDEkrl/Wifi1Scyk="
+    ]
+   }
+  },
+  "meta-data": {
+   "ami-id": "ami-0d527b8c289b4af7f",
+   "ami-launch-index": "0",
+   "ami-manifest-path": "(unknown)",
+   "block-device-mapping": {
+    "ami": "/dev/sda1",
+    "root": "/dev/sda1"
+   },
+   "events": {
+    "maintenance": {
+     "history": "[]",
+     "scheduled": "[]"
+    }
+   },
+   "hibernation": {
+    "configured": "false"
+   },
+   "hostname": "ip-172-31-44-59.eu-central-1.compute.internal",
+   "identity-credentials": {
+    "ec2": {
+     "info": {
+      "AccountId": "737951218338",
+      "Code": "Success",
+      "LastUpdated": "2022-04-02T22:50:28Z"
+     }
+    }
+   },
+   "instance-action": "none",
+   "instance-id": "i-05af1091b00c19269",
+   "instance-type": "t2.micro",
+   "local-hostname": "ip-172-31-44-59.eu-central-1.compute.internal",
+   "local-ipv4": "172.31.44.59",
+   "mac": "06:e6:61:cd:fc:f8",
+   "metrics": {
+    "vhostmd": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+   },
+   "network": {
+    "interfaces": {
+     "macs": {
+      "06:e6:61:cd:fc:f8": {
+       "device-number": "0",
+       "interface-id": "eni-0831d041d69239deb",
+       "ipv4-associations": {
+        "18.198.208.50": "172.31.44.59"
+       },
+       "local-hostname": "ip-172-31-44-59.eu-central-1.compute.internal",
+       "local-ipv4s": "172.31.44.59",
+       "mac": "06:e6:61:cd:fc:f8",
+       "owner-id": "737951218338",
+       "public-hostname": "ec2-18-198-208-50.eu-central-1.compute.amazonaws.com",
+       "public-ipv4s": "18.198.208.50",
+       "security-group-ids": "sg-03d71817cc2e44aa4",
+       "security-groups": "launch-wizard-2",
+       "subnet-id": "subnet-0268faf68fcdb241b",
+       "subnet-ipv4-cidr-block": "172.31.32.0/20",
+       "vpc-id": "vpc-0558cfada3984eefe",
+       "vpc-ipv4-cidr-block": "172.31.0.0/16",
+       "vpc-ipv4-cidr-blocks": "172.31.0.0/16"
+      }
+     }
+    }
+   },
+   "placement": {
+    "availability-zone": "eu-central-1b"
+   },
+   "profile": "default-hvm",
+   "public-hostname": "ec2-18-198-208-50.eu-central-1.compute.amazonaws.com",
+   "public-ipv4": "18.198.208.50",
+   "public-keys": {
+    "emrullah-aws": [
+     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQRPXRwIKlAoRTqLHFyvqzD0sWbszmIE9QO+qBBvS2NWZK31J06je1PE4z/GquMZaau1mwqNrN6qzQlNRYyVnKcq9aHYCPsTc67jh9pYYS+6ZrTxdATfC1V7FgfH3O2SdnHCR6fZLOAGO99LSJONySll+k1V+LBPKTt3A/1o6bQDj6ciNfJVewIeGuT+8D7x/JqPCNhtD5g8LbOoFD4LV0cp/EcvQked8QiS4rtk2z2iy6n4BDtEyRVkIPsUh6J1ABt3UIoBSZ6/fDHj++3j4cVfA5QrBttDLIWXzTJKmdtHbBiXNRCsVdwZSsUHwB4wfyFbaD3tDFDIb0gHewxgAB emrullah-aws"
+    ]
+   },
+   "reservation-id": "r-0170c235b86f026b5",
+   "security-groups": "launch-wizard-2",
+   "services": {
+    "domain": "amazonaws.com",
+    "partition": "aws"
+   }
+  }
+ },
+ "merged_cfg": "redacted for non-root user",
+ "sensitive_keys": [
+  "merged_cfg"
+ ],
+ "sys_info": {
+  "dist": [
+   "ubuntu",
+   "20.04",
+   "focal"
+  ],
+  "platform": "Linux-5.11.0-1022-aws-x86_64-with-glibc2.29",
+  "python": "3.8.10",
+  "release": "5.11.0-1022-aws",
+  "system": "Linux",
+  "uname": [
+   "Linux",
+   "ubuntu",
+   "5.11.0-1022-aws",
+   "#23~20.04.1-Ubuntu SMP Mon Nov 15 14:03:19 UTC 2021",
+   "x86_64",
+   "x86_64"
+  ],
+  "variant": "ubuntu"
+ },
+ "v1": {
+  "_beta_keys": [
+   "subplatform"
+  ],
+  "availability-zone": "eu-central-1b",
+  "availability_zone": "eu-central-1b",
+  "cloud-name": "aws",
+  "cloud_name": "aws",
+  "distro": "ubuntu",
+  "distro_release": "focal",
+  "distro_version": "20.04",
+  "instance-id": "i-05af1091b00c19269",
+  "instance_id": "i-05af1091b00c19269",
+  "kernel_release": "5.11.0-1022-aws",
+  "local-hostname": "ip-172-31-44-59",
+  "local_hostname": "ip-172-31-44-59",
+  "machine": "x86_64",
+  "platform": "ec2",
+  "public_ssh_keys": [
+   "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQRPXRwIKlAoRTqLHFyvqzD0sWbszmIE9QO+qBBvS2NWZK31J06je1PE4z/GquMZaau1mwqNrN6qzQlNRYyVnKcq9aHYCPsTc67jh9pYYS+6ZrTxdATfC1V7FgfH3O2SdnHCR6fZLOAGO99LSJONySll+k1V+LBPKTt3A/1o6bQDj6ciNfJVewIeGuT+8D7x/JqPCNhtD5g8LbOoFD4LV0cp/EcvQked8QiS4rtk2z2iy6n4BDtEyRVkIPsUh6J1ABt3UIoBSZ6/fDHj++3j4cVfA5QrBttDLIWXzTJKmdtHbBiXNRCsVdwZSsUHwB4wfyFbaD3tDFDIb0gHewxgAB emrullah-aws"
+  ],
+  "python_version": "3.8.10",
+  "region": "eu-central-1",
+  "subplatform": "metadata (http://169.254.169.254)",
+  "system_platform": "Linux-5.11.0-1022-aws-x86_64-with-glibc2.29",
+  "variant": "ubuntu"
+ }
+}

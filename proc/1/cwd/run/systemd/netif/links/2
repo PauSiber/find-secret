@@ -1,0 +1,20 @@
+# This is private data. Do not parse.
+ADMIN_STATE=configured
+OPER_STATE=routable
+CARRIER_STATE=carrier
+ADDRESS_STATE=routable
+REQUIRED_FOR_ONLINE=yes
+REQUIRED_OPER_STATE_FOR_ONLINE=degraded
+ACTIVATION_POLICY=up
+NETWORK_FILE=/run/systemd/network/10-netplan-eth0.network
+DNS=172.31.0.2
+NTP=
+SIP=
+DOMAINS=eu-central-1.compute.internal
+ROUTE_DOMAINS=
+LLMNR=yes
+MDNS=no
+ADDRESSES=172.31.44.59/20
+ROUTES=172.31.32.1/32/0/100/254/18446744073709551615 0.0.0.0/0/0/100/254/18446744073709551615
+DHCP4_ADDRESS=172.31.44.59
+DHCP_LEASE=/run/systemd/netif/leases/2

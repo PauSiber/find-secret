@@ -1,0 +1,5 @@
+SRC=/dev/loop0 TARGET=/snap/amazon-ssm-agent/4046 ROOT=/ OPTS=x-gdu.hide
+SRC=/dev/loop1 TARGET=/snap/core18/2253 ROOT=/ OPTS=x-gdu.hide
+SRC=/dev/loop2 TARGET=/snap/core20/1242 ROOT=/ OPTS=x-gdu.hide
+SRC=/dev/loop3 TARGET=/snap/lxd/21835 ROOT=/ OPTS=x-gdu.hide
+SRC=/dev/loop4 TARGET=/snap/snapd/14066 ROOT=/ OPTS=x-gdu.hide

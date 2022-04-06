@@ -1,0 +1,11 @@
+[Match]
+MACAddress=06:e6:61:cd:fc:f8
+Name=eth0
+
+[Network]
+DHCP=ipv4
+LinkLocalAddressing=ipv6
+
+[DHCP]
+RouteMetric=100
+UseMTU=true

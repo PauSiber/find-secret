@@ -1,0 +1,1361 @@
+name: lxd
+base: core20
+assumes:
+  - snapd2.39
+version: "4.0.8"
+grade: stable
+summary: LXD - container and VM manager
+description: |-
+ LXD is a system container and virtual machine manager.
+
+ It offers a simple CLI and REST API to manage local or remote instances,
+ uses an image based workflow and support for a variety of advanced features.
+
+ Images are available for all Ubuntu releases and architectures as well
+ as for a wide number of other Linux distributions. Existing
+ integrations with many deployment and operation tools, makes it work
+ just like a public cloud, except everything is under your control.
+
+ LXD containers are lightweight, secure by default and a great
+ alternative to virtual machines when running Linux on Linux.
+
+ LXD virtual machines are modern and secure, using UEFI and secure-boot
+ by default and a great choice when a different kernel or operating
+ system is needed.
+
+ With clustering, up to 50 LXD servers can be easily joined and managed
+ together with the same tools and APIs and without needing any external
+ dependencies.
+
+
+ Supported configuration options for the snap (snap set lxd [<key>=<value>...]):
+
+   - ceph.builtin: Use snap-specific Ceph configuration [default=false]
+   - ceph.external: Use the system's ceph tools (ignores ceph.builtin) [default=false]
+   - criu.enable: Enable experimental live-migration support [default=false]
+   - daemon.debug: Increase logging to debug level [default=false]
+   - daemon.group: Set group of users that can interact with LXD [default=lxd]
+   - daemon.preseed: Pass a YAML configuration to `lxd init` on initial start
+   - daemon.syslog: Send LXD log events to syslog [default=false]
+   - lvm.external: Use the system's LVM tools [default=false]
+   - lxcfs.pidfd: Start per-container process tracking [default=false]
+   - lxcfs.loadavg: Start tracking per-container load average [default=false]
+   - lxcfs.cfs: Consider CPU shares for CPU usage [default=false]
+   - openvswitch.builtin: Run a snap-specific OVS daemon [default=false]
+   - shiftfs.enable: Enable shiftfs support [default=auto]
+
+confinement: strict
+
+apps:
+  # Main commands
+  activate:
+    command: commands/daemon.activate
+    daemon: oneshot
+    plugs:
+      - lxd-support
+      - system-observe
+
+  daemon:
+    command: commands/daemon.start
+    reload-command: commands/daemon.reload
+    stop-command: commands/daemon.stop
+    stop-timeout: 600s
+    restart-condition: on-failure
+    daemon: simple
+    slots:
+      - lxd
+    plugs:
+      - lxd-support
+      - network-bind
+      - system-observe
+    sockets:
+      unix:
+        listen-stream: $SNAP_COMMON/lxd/unix.socket
+        socket-mode: 0660
+
+  lxc:
+    command: commands/lxc
+    completer: etc/bash_completion.d/snap.lxd.lxc
+    plugs:
+      - lxd-support
+      - system-observe
+
+  lxd:
+    command: commands/lxd
+    plugs:
+      - lxd-support
+      - system-observe
+
+  # Sub-commands
+  benchmark:
+    command: commands/lxd-benchmark
+    plugs:
+      - lxd-support
+      - system-observe
+  buginfo:
+    command: commands/buginfo
+    plugs:
+      - lxd-support
+      - system-observe
+  check-kernel:
+    command: commands/lxd-check-kernel
+    plugs:
+      - lxd-support
+      - system-observe
+  lxc-to-lxd:
+    command: commands/lxc-to-lxd
+    plugs:
+      - lxd-support
+      - system-observe
+  migrate:
+    command: commands/lxd-migrate
+    plugs:
+      - lxd-support
+      - system-observe
+
+hooks:
+  configure:
+    plugs:
+      - network
+      - system-observe
+  remove:
+    plugs:
+      - lxd-support
+      - system-observe
+
+parts:
+  # Dependencies
+  btrfs:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - btrfs-progs
+    organize:
+      sbin/: bin/
+    prime:
+      - bin/btrfs
+      - bin/btrfstune
+      - bin/mkfs.btrfs
+
+  ceph:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - ceph-common
+    organize:
+      usr/bin/: bin/
+      usr/lib/: lib/
+    prime:
+      - bin/ceph
+      - bin/rbd
+      - lib/*/ceph
+      - lib/*/libatomic.so*
+      - lib/*/libboost_iostreams.so*
+      - lib/*/libboost_program_options.so*
+      - lib/*/libboost_thread.so*
+      - lib/*/libcephfs*
+      - lib/*/libibverbs.so*
+      - lib/*/librados.so*
+      - lib/*/librbd.so*
+      - lib/*/librdmacm.so*
+      - lib/*/libsnappy.so*
+      - lib/python3
+
+  criu:
+    source: https://github.com/checkpoint-restore/criu
+    source-tag: v3.16.1
+    source-type: git
+    source-depth: 1
+    plugin: nil
+    build-packages:
+      - asciidoc
+      - libcap-dev
+      - libnet1-dev
+      - libnl-3-dev
+      - libprotobuf-c-dev
+      - libprotobuf-dev
+      - protobuf-c-compiler
+      - protobuf-compiler
+      - xmlto
+    stage-packages:
+      - libnet1
+      - libprotobuf-c1
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "armv7l" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      make
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/criu/"
+      cp criu/criu "${SNAPCRAFT_PART_INSTALL}/criu/"
+    organize:
+      usr/lib/: lib/
+    prime:
+      - criu/*
+      - lib/*/libnet*
+      - lib/*/libproto*
+
+  dqlite:
+    after:
+      - raft
+      - sqlite
+    source: https://github.com/canonical/dqlite
+    source-type: git
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    stage-packages:
+      - libuv1
+    build-packages:
+      - libuv1-dev
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libdqlite*so*
+      - lib/*/libuv*
+
+  edk2:
+    source: https://github.com/tianocore/edk2
+    source-type: git
+    source-tag: IRRELEVANT
+    source-depth: 1
+    plugin: nil
+    build-packages:
+      - on amd64:
+        - acpica-tools
+        - nasm
+        - uuid-dev
+      - on arm64:
+        - acpica-tools
+        - nasm
+        - uuid-dev
+    override-pull: |-
+      set -ex
+      git clone https://github.com/tianocore/edk2 . -b edk2-stable202108
+
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+    override-build: |-
+      [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ] && exit 0
+
+      # Fix submodules
+      sed -i "s#https://git.cryptomilk.org/projects/cmocka#https://gitlab.com/cmocka/cmocka#g" .gitmodules
+      git submodule update --init --recursive
+
+      # Apply patches
+      patch -p1 < "${SNAPCRAFT_PROJECT_DIR}/patches/edk2-0001-force-DUID-LLT.patch"
+      cp "${SNAPCRAFT_PROJECT_DIR}/patches/edk2-0002-logo.bmp" MdeModulePkg/Logo/Logo.bmp
+      patch -p1 < "${SNAPCRAFT_PROJECT_DIR}/patches/edk2-0003-boot-delay.patch"
+      patch -p1 < "${SNAPCRAFT_PROJECT_DIR}/patches/edk2-0004-gcc-errors.patch"
+
+      ARCH="X64"
+      PKG="OvmfPkg/OvmfPkgX64.dsc"
+      FV_CODE="OVMF_CODE"
+      FV_VARS="OVMF_VARS"
+      if [ "$(uname -m)" = "aarch64" ]; then
+          ARCH="AARCH64"
+          PKG="ArmVirtPkg/ArmVirtQemu.dsc"
+          FV_CODE="QEMU_EFI"
+          FV_VARS="QEMU_VARS"
+      fi
+
+      # Run in a bash sub-shell as edksetup.sh requires it
+      set -ex
+      (
+      cat << EOF
+          . ./edksetup.sh
+          make -C BaseTools ARCH=${ARCH}
+          build -a ${ARCH} -t GCC49 -b RELEASE -p ${PKG} \
+            -DSECURE_BOOT_ENABLE=TRUE \
+            -DNETWORK_IP4_ENABLE=TRUE \
+            -DNETWORK_IP6_ENABLE=TRUE \
+            -DNETWORK_TLS_ENABLE=TRUE \
+            -DNETWORK_HTTP_BOOT_ENABLE=TRUE \
+            -DFD_SIZE_2MB \
+            -DTPM_ENABLE=TRUE \
+            -DTPM_CONFIG_ENABLE=TRUE \
+            -DTPM2_ENABLE=TRUE \
+            -DTPM2_CONFIG_ENABLE=TRUE
+      EOF
+      ) | bash -e
+
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/share/qemu/"
+      cp Build/*/*/FV/${FV_CODE}.fd "${SNAPCRAFT_PART_INSTALL}/share/qemu/OVMF_CODE.fd"
+      cp Build/*/*/FV/${FV_VARS}.fd "${SNAPCRAFT_PART_INSTALL}/share/qemu/OVMF_VARS.fd"
+
+      if [ "$(uname -m)" = "aarch64" ]; then
+          truncate -s 64m "${SNAPCRAFT_PART_INSTALL}/share/qemu/OVMF_CODE.fd"
+          truncate -s 64m "${SNAPCRAFT_PART_INSTALL}/share/qemu/OVMF_VARS.fd"
+      fi
+
+    prime:
+      - share/qemu/*
+
+  libmnl:
+    source: https://git.netfilter.org/libmnl
+    source-type: git
+    source-tag: libmnl-1.0.4
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libmnl*so*
+
+  libnftnl:
+    after:
+      - libmnl
+    source: https://git.netfilter.org/libnftnl
+    source-type: git
+    source-tag: libnftnl-1.2.0
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libnftnl*so*
+    override-build: |
+      snapcraftctl build
+
+      sed -i "s# /lib/libmnl.la# ${SNAPCRAFT_STAGE}/lib/libmnl.la#g" "${SNAPCRAFT_PART_INSTALL}/lib/libnftnl.la"
+
+  libseccomp:
+    source: https://github.com/seccomp/libseccomp
+    source-type: git
+    source-tag: v2.5.2
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    build-packages:
+      - gperf
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libseccomp*so*
+
+  libusb:
+    source: https://github.com/libusb/libusb
+    source-type: git
+    source-tag: v1.0.24
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libusb*so*
+
+  logrotate:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - logrotate
+    organize:
+      usr/bin/: bin/
+      usr/lib/: lib/
+      usr/sbin/: bin/
+    stage:
+      - bin/logrotate
+    prime:
+      - bin/logrotate
+
+  lvm:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - dmeventd
+      - lvm2
+      - thin-provisioning-tools
+    organize:
+      sbin/: bin/
+      usr/lib/: lib/
+      usr/sbin/: bin/
+    prime:
+      - bin/cache_*
+      - bin/dmeventd
+      - bin/era_*
+      - bin/lv*
+      - bin/pdata_tools
+      - bin/pv*
+      - bin/thin_*
+      - bin/vg*
+      - -bin/vgimportclone
+      - -bin/lvmconf
+      - -bin/lvmdump
+      - -bin/lvmetad
+      - -bin/lvmpolld
+      - etc/lvm/lvm.conf
+      - lib/*/device-mapper/*
+      - lib/*/libaio.so*
+      - lib/*/libdevmapper*
+      - lib/*/liblvm*
+      - lib/*/libreadline.so*
+
+  nano:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - nano
+    organize:
+      usr/bin/: bin/
+    prime:
+      - bin/nano
+      - etc/nanorc
+
+  nftables:
+    after:
+      - libmnl
+      - libnftnl
+    source: https://git.netfilter.org/nftables
+    source-type: git
+    source-tag: v1.0.0
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+      - --with-json
+    build-packages:
+      - libjansson-dev
+      - libreadline-dev
+    stage-packages:
+      - libjansson4
+    organize:
+      sbin/: bin/
+      usr/lib/: lib/
+    prime:
+      - bin/nft
+      - lib/*/libjansson*so*
+      - lib/libnftables*so*
+
+  nvidia-container:
+    after:
+      - libseccomp
+    source: https://github.com/NVIDIA/libnvidia-container
+    source-type: git
+    source-tag: v1.5.1
+    source-depth: 1
+    plugin: make
+    build-packages:
+      - bmake
+      - curl
+      - lsb-release
+    override-build: |-
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ] && exit 0
+
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/bin/"
+      cp ${SNAPCRAFT_PROJECT_DIR}/snapcraft/wrappers/nvidia-container-cli "${SNAPCRAFT_PART_INSTALL}/bin/"
+
+      set +ex
+      snapcraftctl build
+    organize:
+      usr/local/bin/nvidia-container-cli: bin/nvidia-container-cli.real
+      usr/local/lib: lib/
+    prime:
+      - bin/nvidia-container-cli*
+      - lib/libnvidia-container.so*
+
+  openvswitch:
+    source: https://github.com/openvswitch/ovs
+    source-type: git
+    source-tag: v2.16.0
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    stage-packages:
+      - uuid-runtime
+    organize:
+      sbin/: bin/
+      usr/bin/: bin/
+    prime:
+      - bin/ovs-appctl
+      - bin/ovs-vsctl
+      - bin/ovs-vswitchd
+      - bin/ovsdb-*
+      - bin/uuidgen
+      - share/openvswitch/
+
+  spice-protocol:
+    source: https://gitlab.freedesktop.org/spice/spice-protocol
+    source-type: git
+    source-tag: v0.14.3
+    source-depth: 1
+    plugin: meson
+    prime: []
+
+  spice-server:
+    after:
+      - spice-protocol
+    source: https://gitlab.freedesktop.org/spice/spice
+    source-type: git
+    source-tag: v0.15.0
+    source-depth: 1
+    plugin: meson
+    meson-parameters:
+      - --prefix=/
+      - -Dgstreamer=no
+      - -Dmanual=false
+      - -Dlz4=false
+      - -Dsasl=false
+      - -Dopus=disabled
+      - -Dsmartcard=disabled
+      - -Dtests=false
+    build-packages:
+      - libjpeg-turbo8-dev
+      - python3-pyparsing
+      - python3-six
+    stage-packages:
+      - libjpeg-turbo8
+      - libpixman-1-0
+    organize:
+      sbin/: bin/
+      usr/lib: lib/
+      usr/local/lib/: lib/
+    prime:
+      - lib/*/libjpeg*so*
+      - lib/*/libspice-server*so*
+      - lib/*/libpixman*so*
+
+  qemu:
+    after:
+      - libseccomp
+      - libusb
+      - spice-protocol
+      - spice-server
+    source: IRRELEVANT
+    source-type: git
+    source-tag: IRRELEVANT
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --disable-bochs
+      - --disable-cloop
+      - --disable-dmg
+      - --disable-docs
+      - --disable-guest-agent
+      - --disable-parallels
+      - --disable-qed
+      - --disable-slirp
+      - --disable-user
+      - --disable-vdi
+      - --disable-vnc
+      - --disable-xen
+      - --enable-attr
+      - --enable-cap-ng
+      - --enable-kvm
+      - --enable-libusb
+      - --enable-usb-redir
+      - --enable-linux-aio
+      - --enable-numa
+      - --enable-pie
+      - --enable-rbd
+      - --enable-seccomp
+      - --enable-spice
+      - --enable-system
+      - --enable-tcg
+      - --enable-tools
+      - --enable-vhost-crypto
+      - --enable-vhost-kernel
+      - --enable-vhost-net
+      - --enable-vhost-scsi
+      - --enable-vhost-user
+      - --enable-vhost-vsock
+      - --enable-virtfs
+      - --firmwarepath=/snap/lxd/current/share/qemu/
+      - --localstatedir=/var/
+    build-packages:
+      - bison
+      - flex
+      - pkg-config
+      - libaio-dev
+      - libcap-ng-dev
+      - libglib2.0-dev
+      - libnuma-dev
+      - libpixman-1-dev
+      - librbd-dev
+      - libusbredirhost-dev
+    stage-packages:
+      - genisoimage
+      - libmagic1
+      - libnuma1
+      - libpixman-1-0
+      - libusbredirhost1
+      - libusbredirparser1
+    override-pull: |-
+      set -ex
+      git clone https://gitlab.com/qemu/qemu . -b v6.1.0
+    override-build: |-
+      [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "ppc64le" ] && [ "$(uname -m)" != "s390x" ] && exit 0
+
+      set -ex
+      # Mangle the configure a bit
+      QEMUARCH="$(uname -m)"
+      [ "${QEMUARCH}" = "ppc64le" ] && QEMUARCH="ppc64"
+      sed -i "s/^unset target_list$/target_list=\"${QEMUARCH}-softmmu\"/" configure
+      sed -i 's#libseccomp_minver=".*#libseccomp_minver="0.0"#g' configure
+
+      set +ex
+      snapcraftctl build
+    organize:
+      usr/bin/: bin/
+      usr/lib/: lib/
+      usr/local/bin/: bin/
+      usr/local/lib/: lib/
+      usr/local/libexec/: bin/
+      usr/local/share/: share/
+    prime:
+      - bin/genisoimage*
+      - bin/mkisofs*
+      - bin/qemu-system-*
+      - bin/qemu-img*
+      - bin/virtfs-proxy-helper*
+      - bin/virtiofsd*
+      - lib/*/libatomic.so*
+      - lib/*/libmagic*so*
+      - lib/*/libnuma*so*
+      - lib/*/libpixman*so*
+      - lib/*/libusbredir*so*
+      - share/qemu/keymaps*
+      - share/qemu/efi-virtio.rom*
+      - share/qemu/kvmvapic.bin*
+      - share/qemu/s390-*.img*
+      - share/qemu/slof.bin*
+      - share/qemu/vgabios-*.bin*
+
+  qemu-ovmf-secureboot:
+    after:
+      - edk2
+      - qemu
+    source: https://github.com/puiterwijk/qemu-ovmf-secureboot
+    source-type: git
+    source-depth: 1
+    plugin: nil
+    build-packages:
+      - xorriso
+    override-build: |-
+      [ "$(uname -m)" != "x86_64" ] && [ "$(uname -m)" != "aarch64" ] && exit 0
+
+      export ARCH="$(basename $(readlink -f ${SNAPCRAFT_STAGE}/lib/*-linux-gnu*/))"
+      export LD_LIBRARY_PATH="${SNAPCRAFT_STAGE}/lib:${SNAPCRAFT_STAGE}/lib/${ARCH}"
+
+      set -ex
+      rm -Rf iso-root vfat-root shell.iso
+      mkdir -p iso-root vfat-root/efi/boot
+      cp ../../edk2/build/Build/*/*/*/Shell.efi vfat-root/efi/boot/bootx64.efi
+      cp ../../edk2/build/Build/*/*/*/EnrollDefaultKeys.efi vfat-root/
+      "${SNAPCRAFT_STAGE}/bin/qemu-img" convert --image-opts driver=vvfat,floppy=on,fat-type=12,label=UEFI_SHELL,dir=vfat-root iso-root/shell.img
+      xorriso --as mkisofs -input-charset ASCII -J -rational-rock -e shell.img -no-emul-boot -o shell.iso iso-root/
+
+      # Basic aarch64 support
+      if [ "$(uname -m)" = "aarch64" ]; then
+          sed -i ovmf-vars-generator \
+              -e "s/'-machine', machinetype,/'-machine', 'virt', '-cpu', 'cortex-a57',/" \
+              -e "/charserial1/d" \
+              -e "s/ide-cd/scsi-cd/" \
+              -e "s/'-device',$/'-device', 'virtio-scsi-pci,id=scsi', '-device',/"
+      elif [ "$(uname -m)" = "x86_64" ]; then
+          cp -f "${SNAPCRAFT_STAGE}/share/qemu/kvmvapic.bin" .
+      fi
+
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/share/qemu/"
+      python3 ovmf-vars-generator \
+        --qemu-binary "${SNAPCRAFT_STAGE}/bin/qemu-system-$(uname -m)" \
+        --print-output --disable-smm --skip-testing \
+        --oem-string "$(cat ${SNAPCRAFT_PROJECT_DIR}/snapcraft/etc/ubuntu-sb.crt)" \
+        --ovmf-binary "${SNAPCRAFT_STAGE}/share/qemu/OVMF_CODE.fd" \
+        --ovmf-template-vars "${SNAPCRAFT_STAGE}/share/qemu/OVMF_VARS.fd" \
+        --uefi-shell-iso shell.iso \
+        "${SNAPCRAFT_PART_INSTALL}/share/qemu/OVMF_VARS.ms.fd"
+    prime:
+      - share/qemu/*
+
+  raft:
+    source: https://github.com/canonical/raft
+    source-type: git
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    stage-packages:
+      - libuv1
+      - liblz4-1
+    build-packages:
+      - libuv1-dev
+      - liblz4-dev
+    organize:
+      usr/lib/: lib/
+    prime:
+      - lib/libraft*so*
+      - lib/*/libuv.so*
+
+  sqlite:
+    source: https://github.com/sqlite/sqlite
+    source-type: git
+    source-depth: 1
+    source-tag: version-3.36.0
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    build-packages:
+      - tcl
+    override-build: |-
+      set -ex
+
+      git log -1 --format=format:%ci%n | sed -e 's/ [-+].*$//;s/ /T/;s/^/D /' > manifest
+      git log -1 --format=format:%H > manifest.uuid
+      cp /usr/share/misc/config.guess .
+      cp /usr/share/misc/config.sub .
+      autoreconf -f -i
+
+      set +ex
+      snapcraftctl build
+    prime:
+      - bin/sqlite3
+      - lib/libsqlite3*so*
+
+  squashfs-tools-ng:
+    source: https://github.com/AgentD/squashfs-tools-ng
+    source-type: git
+    source-tag: v1.1.3
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+    build-packages:
+      - liblzma-dev
+    prime:
+      - bin/sqfs2tar
+      - bin/tar2sqfs
+      - lib/libsquashfs.so*
+
+  vim:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - vim-common
+      - vim-tiny
+    organize:
+      usr/bin/: bin/
+      usr/share/vim/vim*/debian.vim: etc/vimrc
+    prime:
+      - bin/vim.tiny
+      - etc/vimrc
+
+  xfs:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - xfsprogs
+    organize:
+      usr/sbin/: bin/
+      sbin/: bin/
+    prime:
+      - bin/xfs_admin
+      - bin/xfs_db
+      - bin/xfs_growfs
+      - bin/xfs_repair
+      - bin/mkfs.xfs
+
+  xtables:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - arptables
+      - ebtables
+    organize:
+      usr/lib/ebtables/: lib/
+      usr/sbin/: bin/
+    prime:
+      - bin/arptables-legacy
+      - bin/ebtables-legacy
+      - etc/ethertypes
+      - etc/protocols
+      - lib/libebtc.so.*
+
+  xz:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - xz-utils
+    organize:
+      usr/bin/: bin/
+      usr/lib/: lib/
+      usr/sbin/: bin/
+    prime:
+      - bin/lzma
+      - bin/xz
+      - lib/*/liblzma*so*
+    override-build: |
+      snapcraftctl build
+
+      # Include the lzma symlink
+      ln -s xz "${SNAPCRAFT_PART_INSTALL}/usr/bin/lzma"
+
+  zfs-0-6:
+    source: https://github.com/openzfs/zfs
+    source-type: git
+    source-tag: zfs-0.6.5.11
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/
+      - --with-config=user
+    build-packages:
+      - uuid-dev
+      - zlib1g-dev
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+
+      git cherry-pick fb963d33ee0dd350143ba1c9cd35d5f7d86910d2  # Fix endian build problem on ppc64el
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mv "${SNAPCRAFT_PART_INSTALL}" "${SNAPCRAFT_PART_INSTALL}.tmp"
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/bin" "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/lib"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zfs" "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zpool" "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/udev/zvol_id" "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/"*so* "${SNAPCRAFT_PART_INSTALL}/zfs-0.6/lib/"
+      rm -Rf "${SNAPCRAFT_PART_INSTALL}.tmp"
+
+  zfs-0-7:
+    source: https://github.com/openzfs/zfs
+    source-type: git
+    source-tag: zfs-0.7.13
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/
+      - --with-config=user
+    build-packages:
+      - libblkid-dev
+      - uuid-dev
+      - zlib1g-dev
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mv "${SNAPCRAFT_PART_INSTALL}" "${SNAPCRAFT_PART_INSTALL}.tmp"
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/bin" "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/lib"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zfs" "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zpool" "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/udev/zvol_id" "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/"*so* "${SNAPCRAFT_PART_INSTALL}/zfs-0.7/lib/"
+      rm -Rf "${SNAPCRAFT_PART_INSTALL}.tmp"
+
+  zfs-0-8:
+    source: https://github.com/openzfs/zfs
+    source-type: git
+    source-tag: zfs-0.8.6
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/
+      - --with-config=user
+    build-packages:
+      - libblkid-dev
+      - libssl-dev
+      - uuid-dev
+      - zlib1g-dev
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mv "${SNAPCRAFT_PART_INSTALL}" "${SNAPCRAFT_PART_INSTALL}.tmp"
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/bin" "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/lib"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zfs" "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zpool" "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/udev/zvol_id" "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/"*so* "${SNAPCRAFT_PART_INSTALL}/zfs-0.8/lib/"
+      rm -Rf "${SNAPCRAFT_PART_INSTALL}.tmp"
+
+  zfs-2-0:
+    source: https://github.com/openzfs/zfs
+    source-type: git
+    source-tag: zfs-2.0.6
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/
+      - --with-config=user
+    build-packages:
+      - libblkid-dev
+      - libssl-dev
+      - uuid-dev
+      - zlib1g-dev
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mv "${SNAPCRAFT_PART_INSTALL}" "${SNAPCRAFT_PART_INSTALL}.tmp"
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/bin" "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/lib"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zfs" "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zpool" "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/udev/zvol_id" "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/"*so* "${SNAPCRAFT_PART_INSTALL}/zfs-2.0/lib/"
+      rm -Rf "${SNAPCRAFT_PART_INSTALL}.tmp"
+
+  zfs-2-1:
+    source: https://github.com/openzfs/zfs
+    source-type: git
+    source-tag: zfs-2.1.1
+    source-depth: 1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/
+      - --with-config=user
+    build-packages:
+      - libblkid-dev
+      - libssl-dev
+      - uuid-dev
+      - zlib1g-dev
+    override-build: |
+      set -ex
+
+      [ "$(uname -m)" != "x86_64" ] && \
+        [ "$(uname -m)" != "aarch64" ] && \
+        [ "$(uname -m)" != "s390x" ] && \
+        [ "$(uname -m)" != "ppc64le" ] && exit 0
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mv "${SNAPCRAFT_PART_INSTALL}" "${SNAPCRAFT_PART_INSTALL}.tmp"
+      mkdir -p "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/bin" "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/lib"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zfs" "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/sbin/zpool" "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/udev/zvol_id" "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/bin/"
+      mv "${SNAPCRAFT_PART_INSTALL}.tmp/lib/"*so* "${SNAPCRAFT_PART_INSTALL}/zfs-2.1/lib/"
+      rm -Rf "${SNAPCRAFT_PART_INSTALL}.tmp"
+
+
+  zstd:
+    source: snapcraft/empty
+    plugin: nil
+    stage-packages:
+      - zstd
+    organize:
+      usr/bin/: bin/
+    prime:
+      - bin/pzstd
+      - bin/zstd
+
+  # Core components
+  lxc:
+    after:
+      - libseccomp
+    source: https://github.com/lxc/lxc
+    source-type: git
+    source-tag: lxc-4.0.11
+    build-packages:
+      - libapparmor-dev
+      - libcap-dev
+      - libgnutls28-dev
+      - libselinux1-dev
+      - pkg-config
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+      - --disable-api-docs
+      - --disable-bash
+      - --disable-doc
+      - --disable-examples
+      - --disable-memfd-rexec
+      - --disable-tests
+      - --disable-tools
+      - --enable-apparmor
+      - --enable-seccomp
+      - --enable-selinux
+      - --enable-capabilities
+      - --with-rootfs-path=/var/snap/lxd/common/lxc/
+      - --libexecdir=/snap/lxd/current/libexec/
+    organize:
+      snap/lxd/current/lxc: lxc
+      snap/lxd/current/libexec: libexec
+      share/lxc/hooks: lxc/hooks
+    prime:
+      - bin/lxc-checkconfig
+      - lib/liblxc.so.1
+      - lib/liblxc.so.1.*
+      - lxc/config/common.conf.d
+      - lxc/hooks/nvidia
+    override-build: |
+      set -ex
+
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+
+      git cherry-pick 429233cf0e942e6f8109311fa0237358330b229b  # criu: support restoring containers with pre-created veth devices
+      git cherry-pick 1505f0780573f28d33f540884ba420293c1144a6  # conf: make it more obvious how auto-mount flags are defined
+      git cherry-pick 1ad1cab805b5a97cff9d0c5612a1eacbb187f091  # doc: add loglevels to ja and ko common options
+      git cherry-pick 49fab27fc58f12d49c720bf83412d2092cf0e724  # doc: Add lxc.sched.core to Japanese lxc.container.conf(5)
+      git cherry-pick d40b0deb45e35ba6f1996a0a48c265271b30ce6e  # doc: fix typo in English lxc.container.conf(5)
+      git cherry-pick e328a988e038724450dd64d8510dd16e5fda8ea5  # conf: handle kernels without or not using SMT
+      git cherry-pick 4d3aad49d6e6017ca53591339c9fe916836b87c7  # AUTHORS: Update to point to git history
+      git cherry-pick 48728e9880f50c4e354eadb7b9836b63276e3eda  # conf: add cgroup2, cgroup2:ro, cgroup2:force, cgroup2:ro:force options
+      git cherry-pick bc51048b7918b5c28ef104811e9f21d80e331f84  # confile: don't use path_simplify() on lxc.{execute,init}.cmd
+      git cherry-pick d04eb166c64ca8185119d502bf84a66a04dc3fd9  # build: add static libcap to output
+      git cherry-pick 9219277cc6627654adf03628b84d15eb0a545138  # build: add io-uring-event-loop option
+      git cherry-pick 1a8895855e9f3d7afded64fca74f4d9fc7974984  # Replace 'which' with 'command -v'
+      git cherry-pick f69e6b4d3f7d614de190e72d610705272ee36909  # mainloop: make sure that descr->ring is allocated
+      git cherry-pick 71743e8111738bd70b0b126f6500b95c0db2e806  # start: check event loop type before closing fd
+      git cherry-pick fdfb4a13dec5d23f0c87b64064b092dee5583531  # Replace 'which' with 'command -v' in tests too
+      git cherry-pick 1ec5939b4aae696f1109875a6ff57e85bda37b25  # Replace deprecated backticks with $() construct
+      git cherry-pick cf931928f1998fc8404376d215aa151d574d95ca  # Replace last occurence of 'which' with 'command -v'
+      git cherry-pick 1a102b310fc20b7c814c92e78c3664eb75186826  # mainloop: make ifdefs easier to follow
+      git cherry-pick 78baec37d69969d4b4275239040c6ee5719cab9e  # build: improve liburing support detection
+      git cherry-pick 4915c91128c8609805c06f438cdb8f3502dea044  # process_utils: add signal_name() helper
+      git cherry-pick f24c234ee901e79029ecc111693d8ac1e9a95995  # start: log signal name and number
+      git cherry-pick c3637943195146cab00b4e6b74e5978a089cd4a4  # build: move _FILE_OFFSET_BITS to common option
+      git cherry-pick 1b74e01add8e8ca0a887d25fd74d330f11ce8235  # tests: include config.h
+      git cherry-pick 334cf7beba5a27e27c958c3d71d6f5cf421367d7  # conf: apply /proc/sys and /proc/<pid>/ parameters
+      git cherry-pick a10ff341883a3d2079253288734b2505819a5e51  # conf: improve logging setting sysctl and /proc/<pid>/ parameters
+      git cherry-pick 6f580343e5d82544043b8cce5c7541acba2837d0  # test: improve logging helpers
+      git cherry-pick d8027e49c334aa5fa14e11cf61c73ee477badd52  # tests: add lxc.sysctls.* test
+      git cherry-pick 93be4e51210714922dff2829d2e00d55a83dceea  # tests: add lxc.proc.* test
+      git cherry-pick a616a311a328bab86dd6022d41437db3554bab46  # build: refuse to compile with unsupported liburing version
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      mkdir -p $SNAPCRAFT_PART_INSTALL/lxc/config/common.conf.d/
+      ln -s /var/snap/lxd/common/lxc/local.conf $SNAPCRAFT_PART_INSTALL/lxc/config/common.conf.d/01-local.conf
+      sed -i "s#includedir=.*#includedir=$SNAPCRAFT_PART_INSTALL/include#g" $SNAPCRAFT_PART_INSTALL/lib/pkgconfig/lxc.pc
+      sed -i "s#libdir=.*#libdir=$SNAPCRAFT_PART_INSTALL/lib#g" $SNAPCRAFT_PART_INSTALL/lib/pkgconfig/lxc.pc
+
+  lxcfs:
+    source: https://github.com/lxc/lxcfs
+    source-type: git
+    source-tag: lxcfs-4.0.11
+    build-packages:
+      - libfuse-dev
+      - libpam0g-dev
+      - pkg-config
+    stage-packages:
+      - fuse
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=
+      - --datarootdir=/snap/lxd/current/
+      - --localstatedir=/var/snap/lxd/common/var/
+    organize:
+      snap/lxd/current/lxc: lxc
+      snap/lxd/current/lxcfs: lxcfs
+      lib/lxcfs: lib
+    prime:
+      - bin/fusermount
+      - lib/*/libfuse.so.*
+
+      - bin/lxcfs
+      - lib/liblxcfs.so
+
+      - lxc
+      - lxcfs
+    override-build: |
+      set -ex
+
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+
+      set +ex
+      snapcraftctl build
+      set -ex
+
+      sed -i "s#\${LXC_ROOTFS_MOUNT}/var/snap/lxd/common/var/lib/lxcfs/#\${LXC_ROOTFS_MOUNT}/var/lib/lxcfs/#g" $SNAPCRAFT_PART_INSTALL/snap/lxd/current/lxcfs/lxc.mount.hook
+
+  lxd:
+    source: https://github.com/lxc/lxd
+    source-type: git
+    source-tag: lxd-4.0.8
+    after:
+      - lxc
+      - dqlite
+      - sqlite
+    build-packages:
+      - libacl1-dev
+      - libudev-dev
+      - pkg-config
+    build-snaps:
+      - go
+    stage-packages:
+      - acl
+      - attr
+      - dnsmasq-base
+      - gdisk
+      - iw
+      - netbase
+      - pciutils
+      - pigz
+      - rsync
+      - squashfs-tools
+      - usbutils
+      - xdelta3
+    plugin: nil
+    override-build: |
+      set -ex
+
+      # Git cherry-picks
+      cd ../src
+      git config user.email "noreply@linuxcontainers.org"
+      git config user.name "LXD snap builder"
+
+      git cherry-pick 0b83f85e0c152d551fd36ff33390589beea0147e  # lxd/db/query/transaction: Adds 10s timeout to Transaction
+      git cherry-pick 6dd277bac716b6e647feedebf1b0fd7c0237a27b  # lxd/cluster/gateway: Add 30s idle timeout in dqliteProxy
+      git cherry-pick a914ec0d3fc6ebf1b697869bac100d8a8a500120  # lxd/cluster/gateway: Close remote connection in dqliteProxy
+      git cherry-pick ffd9e6732a35d3e3306bab659d67c1389a5a69ad  # lxd/cluster/events: Disconnect event listeners for offline members in eventsUpdateListeners
+      git cherry-pick 8a466b6607ee09a34554243b6a3ad607bffa942c  # lxd/events/events: Rework events.Listener to use websocket heartbeats
+      git cherry-pick 1fb4ea28239c7a48c80bed3a3f322ceb6798477a  # lxd/device/nic/bridged: Prevent specifying ipv{n}.address when NIC is connected to unmanaged parent bridge
+      git cherry-pick 69074eb0b92c371d55f1fbba1019edd77956de20  # test: Add test for bridged NIC not able to specify static IPs when using unmanaged parent bridge
+      git cherry-pick 696550e91d59be24d7fa817200e74389c8f9e671  # lxd/events/events: Moves blocking reader into heartbeat function
+      git cherry-pick 5050a85e6a8083ca91d7a261fd7d4b4854f87122  # lxd: Removes blocking reader from event client
+      git cherry-pick 186c55a07a8198e1ae65af6cb88b5cb37d08e4f0  # lxd-agent: Removes blocking reader from event client
+      git cherry-pick 2c2a894ab5846683a5c61d2700a3a965f419d6ec  # lxd/fsmonitor/drivers: Log warning instead of failing
+      git cherry-pick 54d4352f129949ba5333de954c433233d205ad5b  # lxd/cluster/gateway: Removes dqliteProxy idle timeout
+      git cherry-pick aecd5c2b167db83ea5fba240b0c9aa66f773f165  # lxd/cluster/gateway: Update logging in dqliteProxy
+      git cherry-pick fa4283502baa595c428ee08e9e78258ad4b7587c  # lxd/cluster/gateway: Set 30s TCP_USER_TIMEOUT and keep alive timers in dqliteProxy
+      git cherry-pick 5adb403b2ace8e825559d3d83fae2aaeb130f219  # lxd/util/net: Adds SetTCPUserTimeout function
+      git cherry-pick 02da30160349496c5a6dc729fa80fd4843183ade  # lxd/db/db: retry cluster transactions once if context deadline exceeded
+      git cherry-pick a190fc2e5d4eb5a648d8b3e179182e2b523d4bd2  # shared/validate: Add IsListOf
+      git cherry-pick 6c2d0e7411015c11addd019578cbc8bbc77212d8  # shared: Add network zone API
+      git cherry-pick 1c5e0b1682602359122a32aadf34e07edbebed3b  # client: Rename lxd_network_forwards for consistency
+      git cherry-pick 5d5c8d1a5321e3dd718606333438fefa77a683a2  # client: Add network zone functions
+      git cherry-pick e6974515157ed5f2711cf62df342233d5aa2f5ac  # doc/rest-api: Refresh swagger YAML
+      git cherry-pick 1995461101098d21c97b782c67ca41ba9e6b9b0d  # lxd/instance/qemu: Fix host-nodes on multi-node
+      git cherry-pick 7fc1613f7e692cdbf0e60d68478f46974158a5f4  # lxd/migrate: Fix deadlock in sendControl
+      git cherry-pick 4378a5f7a1ac40f1dbc41cfa003b8c4dc6c97086  # lxd/migrate: Time out when waiting for connections
+      git cherry-pick 2bd34d99a3c5b60e20fb1e3c2b6ee138779ec8a4  # lxd/storage/backend/lxd: Clarify errors in CreateInstanceFromCopy and CreateInstanceFromMigration
+      git cherry-pick 46246f0aabc7133fa0356afa93b2d51af2fcbda5  # lxd/instances/post: Wrap error in createFromMigration
+      git cherry-pick 833ca8ab97f6919582124b48b5feb719f3d65cfe  # lxd/instances/post: Update comment in createFromMigration
+      git cherry-pick b31f08d0f3b1f46e937d44bbf5d0574a194196a7  # lxd/instance/post: Replace node in errors with member
+      git cherry-pick c4bb3eea86ab4ae2736710b17abddec5b988a1d5  # lxd/instances/post: Replace node with member in error in clusterCopyContainerInternal
+      git cherry-pick ee5c0017d2dc13dacc50f05ba39d9a26de7e5297  # test: Update teardown_clustering_netns to succeed if process has already gone
+      git cherry-pick 4fde87d6289605c88548bfdb7fcd96d8c4042dff  # lxd/device/nic/bridged: Allow static IP on unmanaged bridge when MAAS subnet specified
+      git cherry-pick cfffde0c7ef377559eea06d974057e4c5888053a  # bash-completion: Add restore snapshots
+      git cherry-pick 2544cf3e447791ff0280f4694f5f8c76743ef607  # lxd/operations: Updates waitForOperations to accept consoleShutdownTimeout arg
+      git cherry-pick 621febe69b6f0a2b02275fbdf45a57d7bc08dddd  # lxd/daemon: Load shutdown timeout from DB in Stop()
+      git cherry-pick cd582ff0ccea33c1ca0799adc207999eb9b4c70f  # lxd/daemon: Only call waitForOperations during Stop if cluster DB is available
+      git cherry-pick 634b4311e7170b3a05746e4b5dd53480a8edeea5  # lxd/api/internal: Wait for daemon to finish starting up before shutting down in internalShutdown
+      git cherry-pick cde615d6fc9c546620d851643c451f613d2e01d2  # forkuevent: minor fixes
+      git cherry-pick 646085281948c397882c6d24ca777d52dd61937b  # forkuevent: fix "--" placement
+      git cherry-pick eed913c88400ebb31c44e634f8d0eba7d17ffbfa  # lxd/instances/qemu: Enable topoext on x86_64 with SMT
+      git cherry-pick e0f49dac2257206a9f5e926a96aa07ff12650b5a  # doc/instances: Explain CPU topology in VMs
+      git cherry-pick 84e282af2868cddf155ac2b51e26fd3a1be06f60  # lxc/file: Don't use HostPath on temp files
+      git cherry-pick 8430d54dfe20cbd6235f59e283263044361e03ad  # lxd/cluster: Log leader address on failure
+      git cherry-pick 2bde6a28481a0516c58e037388d03412ad953e3f  # lxd/api/cluster: Sleep for 100ms to allow http.Flush to render
+      git cherry-pick b2e70bebe93fe6d86c015fc136b00abb264e1720  # lxd/fsmonitor: Don't crash on Walk errors
+      git cherry-pick 1e673935bead04f013ff9ef9556bca585ae467c8  # lxd/cluster: Add missing import
+      git cherry-pick bcb605ac5961be4d67f204ec6a02c563a9a1b1ba  # lxd/instance/lxc: Only mount for file operations if stopped
+      git cherry-pick 642fbf4b4d2d7d69d9b71cca8b93d147714f8c4c  # lxd/instance_exec: Improve and expand default PATH setting
+      git cherry-pick 467a2c1f97350fbede9c51431d0394bc9c040781  # lxd/instance/drivers/driver/lxc: Adds release function to reduce repetition of liblxc clearing logic
+      git cherry-pick 79ea78f59ea11fc8be27c10b788fb786e2614f1d  # lxd/instance/drivers/driver/lxc: Release liblxc cache when stopping or shutting down
+
+      # Setup build environment
+      export GOPATH=$(realpath ./.go)
+      export CGO_CFLAGS="-I${SNAPCRAFT_STAGE}/include/ -I${SNAPCRAFT_STAGE}/usr/local/include/"
+      export CGO_LDFLAGS="-L${SNAPCRAFT_STAGE}/lib/ -L${SNAPCRAFT_STAGE}/usr/local/lib/"
+      export CGO_LDFLAGS_ALLOW="(-Wl,-wrap,pthread_create)|(-Wl,-z,now)"
+
+      # Setup the GOPATH
+      rm -Rf "${GOPATH}"
+      mkdir -p "${GOPATH}/src/github.com/lxc"
+      ln -s "$(pwd)" "${GOPATH}/src/github.com/lxc/lxd"
+
+      # Download the dependencies
+      go get -d -v ./...
+
+      # Build the binaries
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxc" github.com/lxc/lxd/lxc
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxc-to-lxd" github.com/lxc/lxd/lxc-to-lxd
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxd" -tags=libsqlite3 github.com/lxc/lxd/lxd
+      CGO_ENABLED=0 go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxd-agent" -tags=agent,netgo github.com/lxc/lxd/lxd-agent
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxd-benchmark" github.com/lxc/lxd/lxd-benchmark
+
+      # Setup bash completion
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/etc/bash_completion.d/
+      cp scripts/bash/lxd-client ${SNAPCRAFT_PART_INSTALL}/etc/bash_completion.d/snap.lxd.lxc
+    organize:
+      usr/bin/: bin/
+      usr/lib/: lib/
+      usr/share/misc/: share/misc/
+      var/lib/usbutils/usb.ids: share/misc/
+      usr/sbin/: bin/
+      sbin/: bin/
+    prime:
+      - bin/dnsmasq
+      - bin/getfattr
+      - bin/setfattr
+      - bin/iw
+      - bin/pigz
+      - bin/rsync
+      - bin/setfacl
+      - bin/sgdisk
+      - bin/unsquashfs
+      - bin/xdelta3
+
+      - lib/*/libidn.so.*
+
+      - etc/bash_completion.d/snap.lxd.lxc
+
+      - share/misc
+
+      - bin/lxc
+      - bin/lxc-to-lxd
+      - bin/lxd
+      - bin/lxd-agent
+      - bin/lxd-benchmark
+
+  lxd-migrate:
+    source: lxd-migrate/
+    after:
+      - lxd
+      - sqlite
+    build-snaps:
+      - go
+    plugin: nil
+    override-build: |
+      set -ex
+
+      # Setup build environment
+      export GOPATH=$(realpath ./.go)
+      export CGO_CFLAGS="-I${SNAPCRAFT_STAGE}/include/ -I${SNAPCRAFT_STAGE}/usr/local/include/"
+      export CGO_LDFLAGS="-L${SNAPCRAFT_STAGE}/lib/ -L${SNAPCRAFT_STAGE}/usr/local/lib/"
+
+      # Download the dependencies
+      go get -d -v ./...
+
+      # Build the binaries
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/lxd-migrate" -tags=libsqlite3 ./
+
+      # Install bridge script
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/bin/
+      cp scripts/upgrade-bridge ${SNAPCRAFT_PART_INSTALL}/bin/upgrade-bridge
+    prime:
+      - bin/lxd-migrate
+      - bin/upgrade-bridge
+
+  shmounts:
+    source: shmounts/
+    plugin: make
+    prime:
+      - bin/setup-shmounts
+
+  snap-query:
+    source: snap-query/
+    build-snaps:
+      - go
+    plugin: nil
+    override-build: |
+      set -ex
+
+      # Setup build environment
+      export GOPATH=$(realpath ./.go)
+
+      # Build the binaries
+      go build -o "${SNAPCRAFT_PART_INSTALL}/bin/snap-query" snap-query.go
+    prime:
+      - bin/snap-query
+
+  strip:
+    source: snapcraft/empty
+    after:
+      - btrfs
+      - ceph
+      - dqlite
+      - libseccomp
+      - logrotate
+      - lvm
+      - nano
+      - nvidia-container
+      - openvswitch
+      - raft
+      - sqlite
+      - squashfs-tools-ng
+      - vim
+      - xfs
+      - xz
+      - zfs-0-6
+      - zfs-0-7
+      - zfs-0-8
+      - lxc
+      - lxcfs
+      - criu
+      - lxd
+      - lxd-migrate
+      - shmounts
+      - snap-query
+    plugin: nil
+    override-prime: |
+      set -x
+
+      # Strip some of the heavy bits
+      strip -s ${SNAPCRAFT_PRIME}/bin/lxc
+      strip -s ${SNAPCRAFT_PRIME}/bin/lxd*
+      strip -s ${SNAPCRAFT_PRIME}/bin/snap*
+      strip -s ${SNAPCRAFT_PRIME}/lib/liblxc*
+      strip -s ${SNAPCRAFT_PRIME}/lib/libdqlite*
+      strip -s ${SNAPCRAFT_PRIME}/lib/libsqlite*
+
+      for zfs in zfs-0.6 zfs-0.7 zfs-0.8 zfs-2.0 zfs-2.1; do
+          [ ! -d "${SNAPCRAFT_PRIME}/${zfs}" ] && continue
+          strip -s ${SNAPCRAFT_PRIME}/${zfs}/bin/* ${SNAPCRAFT_PRIME}/${zfs}/lib/*
+      done
+
+      [ -e "${SNAPCRAFT_PRIME}/criu/criu" ] && strip -s ${SNAPCRAFT_PRIME}/criu/criu
+
+      exit 0
+
+  wrappers:
+    plugin: dump
+    source: snapcraft/
+    organize:
+      hooks/: snap/hooks/
+      wrappers/editor: bin/
+      wrappers/remote-viewer: bin/

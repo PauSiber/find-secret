@@ -1,0 +1,10 @@
+I:4018324
+E:ID_MM_CANDIDATE=1
+E:ID_NET_NAMING_SCHEME=v245
+E:ID_NET_NAME_MAC=enx06e661cdfcf8
+E:ID_PATH=xen-vif-0
+E:ID_PATH_TAG=xen-vif-0
+E:ID_NET_DRIVER=vif
+E:ID_NET_LINK_FILE=/usr/lib/systemd/network/99-default.link
+E:SYSTEMD_ALIAS=/sys/subsystem/net/devices/eth0
+G:systemd
